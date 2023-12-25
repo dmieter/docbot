@@ -10,7 +10,7 @@ embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 vectorstore = Chroma(
     client=chroma_client,
-    collection_name="mpei_orders",
+    collection_name="mpei_docs",
     embedding_function=embeddings
 )
 print("Size:" + str(vectorstore._collection.count()))
