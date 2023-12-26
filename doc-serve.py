@@ -3,9 +3,39 @@ import cherrypy
 from langchain.embeddings import HuggingFaceEmbeddings
 import chromadb
 from langchain.vectorstores import Chroma
+from langchain.chat_models import GigaChat
+from langchain import hub
+from langchain.schema import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain.prompts import PromptTemplate
 
 EMBEDDINGS_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+CONTEXT_DOC_NUMBER = 3
 #EMBEDDINGS_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+
+prompt_template_eng = """Use the following pieces of context to answer the question at the end.
+      If you don't know the answer, just say that you don't know, don't try to make up an answer.
+      Use three sentences maximum and keep the answer as concise as possible.
+      Always say "thanks for asking!" at the end of the answer.
+      {context}
+      Question: {question}
+      Helpful Answer:"""
+prompt_template_ru = """У тебя роль секретаря кафедры технического университета.
+      Используй следующие части документов для ответа на вопрос в конце этого запроса.
+      Если данных для ответа не хватает, то явно укажи на это в ответе.
+      Ответ должен содержать максимум три предложения, но быть достаточно подробным.
+      Можно добавить в ответ дополнительные детали, краткое поздравление с наступающим новым годом 
+      или посетовать на усталость от работы с документами.
+      {context}
+      Вопрос: {question}
+      Твой ответ:"""
+custom_prompt = PromptTemplate.from_template(prompt_template_ru)
+
+
+
+def format_docs(docs):
+    docs_num = CONTEXT_DOC_NUMBER if (len(docs) > CONTEXT_DOC_NUMBER) else len(docs)
+    return "\n =================== \n".join(docs[i].page_content for i in range(docs_num))
 
 embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
@@ -15,6 +45,16 @@ vectorstore = Chroma(
     embedding_function=embeddings
 )
 print("Size:" + str(vectorstore._collection.count()))
+
+retriever = vectorstore.as_retriever()      
+llm = GigaChat(verify_ssl_certs=False)  
+
+rag_chain = (
+    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    | custom_prompt
+    | llm
+    | StrOutputParser()
+)
 
 class AnswerQuestion(object):
     @cherrypy.expose
@@ -39,8 +79,14 @@ class AnswerQuestion(object):
     @cherrypy.expose
     def ask(self, question=""):
         trimmed_question = question[:300] if len(question) > 300 else question
-        res_docs = vectorstore.similarity_search(trimmed_question)
-        return self.index(question, res_docs[0].page_content[:1000])
+        #res_docs = vectorstore.similarity_search(trimmed_question)
+        #return self.index(question, res_docs[0].page_content[:1000])
+
+        answer = self.answer(trimmed_question)
+        return self.index(question, answer)
+    
+    def answer(self, question):
+        return rag_chain.invoke(question)  
 
 
 if __name__ == '__main__':
@@ -52,7 +98,7 @@ if __name__ == '__main__':
         },
         '/static': {
             'tools.staticdir.on': True,
-            'tools.staticdir.dir': os.path.join(work_dir, "docbot", "static"),
+            'tools.staticdir.dir': os.path.join(work_dir, "static"),
         }
     }
     cherrypy.quickstart(AnswerQuestion(), '/', conf)
