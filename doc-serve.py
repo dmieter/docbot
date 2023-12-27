@@ -15,20 +15,19 @@ CONTEXT_DOC_NUMBER = 3
 
 prompt_template_eng = """Use the following pieces of context to answer the question at the end.
       If you don't know the answer, just say that you don't know, don't try to make up an answer.
-      Use three sentences maximum and keep the answer as concise as possible.
-      Always say "thanks for asking!" at the end of the answer.
+      The answer should be as concise as possible and contain some details from the documents.
+      Your answer is really important for the state education!
       {context}
       Question: {question}
       Helpful Answer:"""
-prompt_template_ru = """У тебя роль секретаря кафедры технического университета.
-      Используй следующие части документов для ответа на вопрос в конце этого запроса.
+prompt_template_ru = """Действуй как секретарь кафедры технического университета.
+      Используй для ответа на вопрос приведенные ниже документы.
       Если данных для ответа не хватает, то явно укажи на это в ответе.
-      Ответ должен содержать максимум три предложения, но быть достаточно подробным.
-      Можно добавить в ответ дополнительные детали, краткое поздравление с наступающим новым годом 
-      или посетовать на усталость от работы с документами.
-      {context}
+      Добавь в ответ дополнительные релевантные подробности из документов.
+      От точности ответа зависит качество образования в стране!
+      Документы: {context}
       Вопрос: {question}
-      Твой ответ:"""
+      Ответ секретаря:"""
 custom_prompt = PromptTemplate.from_template(prompt_template_ru)
 
 
