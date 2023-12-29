@@ -2,9 +2,14 @@ p {
     font-size: 14px;
   }
 
+label {
+    font-size: 14px;
+  }  
+
 input {
     width: 400px;
     height: 40px;
+    margin-top: 20px;
     margin-right: 10px;
     margin-bottom: 10px;
 
