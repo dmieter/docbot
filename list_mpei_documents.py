@@ -1,7 +1,8 @@
 # %% IMPORTS
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup as bs
-import json
+from datetime import datetime
+from datetime import timedelta
 
 # %% GLOBALS
 
@@ -9,6 +10,11 @@ MPEI_URL = "https://mpei.ru/AboutUniverse/OficialInfo/Pages/Orders.aspx"
 
 
 # %% API FUNCTIONS
+
+def date_add_days(date_str, days):
+    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+    date_plus = date_obj + timedelta(days)
+    return date_plus.strftime('%Y-%m-%d')
 
 def list_all_docs():
     req = Request(MPEI_URL)
@@ -30,10 +36,11 @@ def list_all_docs():
         if div_date:
             date = div_date.text
             date_parts = date.split('.')
-            date = date_parts[2]+date_parts[1]+date_parts[0]    
+            date = date_parts[2]+"-"+date_parts[1]+"-"+date_parts[0]
 
-        metadata = date + ";" + filename + ";" + name + ";" + href
-        if date > "20230901":
+        expire_date = date_add_days(date, 120) # expires in 4 monthes by default
+        metadata = date + ";" + expire_date + ";" + filename + ";" + name + ";" + href
+        if date > "2023-12-01":
             print(metadata)
 # %% TEST   
 list_all_docs()

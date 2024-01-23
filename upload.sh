@@ -1,8 +1,12 @@
 #!/bin/bash
 
+# $1 - file with urls
+# $2 - number of urls to download
+# $3 - folder to store files
+
 #./upload.sh index/urls.txt 20 index/
 
-urls=$(grep  -v '^#' $1 | grep 'pdf$')  # load all not commented lines 
+urls=$(grep  -v '^#' $1 | grep 'pdf$')  # load all not commented lines from first argument
 
 download_max=$2
 download_num=0
