@@ -1,0 +1,34 @@
+categories:
+  obr_pravo:
+    display_name: "Образовательное право"
+    prompt: "obr_pravo"
+    retriever: 
+      threshold: 0.185
+      k: 4
+      s: 2
+      t: 1
+  mpei-new-orders:
+    display_name: "Приказы МЭИ"
+    prompt: "mpei_orders"
+    retriever: 
+      threshold: 0.185
+      k: 4
+      s: 2
+      t: 1
+  bars_lecturer:
+    display_name: "БаРС для сотрудников"
+    prompt: "general"
+    retriever: 
+      threshold: 0.185
+      k: 4
+      s: 2
+      t: 1
+default:
+  knowledge_base: "Приказы МЭИ"
+  db_path: "./chroma_db"
+  prompt: "general"
+  retriever: 
+    threshold: 0.185
+    k: 4
+    s: 2
+    t: 1
