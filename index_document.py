@@ -9,7 +9,7 @@ import index_core as ic
 
 
 # 0. LOAD INPUT ARGUMENTS
-DOC_PATH = ic.loadArgument(1, './pdf/mpei/obr_pravo/index/')
+DOC_PATH = ic.loadArgument(1, 'index.pdf')
 EXPIRE_DAYS = ic.loadArgument(2, 90)
 DB_DIR = ic.loadArgument(3, "./chroma_db")
 COLLECTION = ic.loadArgument(4, "obr_pravo")

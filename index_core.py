@@ -35,6 +35,14 @@ def check_already_indexed(filename, persist_directory, collection_name):
 
     return False
 
+def check_collection_exists(db, collection_name):
+    collections = db.list_collections()
+    for collection in collections:
+        if collection_name == collection.name:
+            return True
+
+    return False    
+
 def check_already_indexed(filename, collection):
     #chroma_client = chromadb.PersistentClient(path = persist_directory)
     #collection = chroma_client.get_collection(name = collection_name)
