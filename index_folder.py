@@ -5,6 +5,7 @@ from langchain.vectorstores import Chroma
 import chromadb
 import pandas as pd
 from datetime import datetime
+import time
 
 import index_core as ic
 
@@ -23,6 +24,7 @@ META_FILE_CSV = ic.loadArgument(7, "../pdf/mpei/obr_pravo/index/metadata.csv")
 def process_command():
 
     # 1. LOAD INPUT DOCUMENTS
+    current_time_in_seconds = int(time.time())
 
     loader = DirectoryLoader(INPUT_DIR, glob="**/*" + SUFFIX)
     docs = loader.load()
@@ -43,6 +45,7 @@ def process_command():
                 metadata = metadata.iloc[0]
 
                 if not ic.check_already_indexed(metadata['name'], collection): # skip already indexd files
+                    doc.metadata['upload_id'] = current_time_in_seconds
                     doc.metadata['name'] = metadata['name']
                     doc.metadata['date'] = str(metadata['date'])
                     doc.metadata['expire_date'] = str(metadata['expire_date'])
@@ -58,6 +61,7 @@ def process_command():
         for doc in docs_to_index:
             source_file, source_file_origin = ic.retrieve_filename(doc.metadata['source'])
             if not ic.check_already_indexed(source_file_origin, collection):
+                doc.metadata['upload_id'] = current_time_in_seconds
                 doc.metadata['name'] = source_file_origin
                 doc.metadata['date'] = today
                 doc.metadata['expire_date'] = ic.date_add_days(today, 90) # 3 monthes expiration by default
@@ -73,6 +77,7 @@ def process_command():
     if(len(docs_to_index) > 0):
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP_SIZE)
         splits = text_splitter.split_documents(docs_to_index)
+        ic.numberize_splits(splits)
         print(len(splits))
 
         from langchain.embeddings import HuggingFaceEmbeddings

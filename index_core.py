@@ -43,6 +43,22 @@ def check_collection_exists(db, collection_name):
 
     return False    
 
+def numberize_splits(splits):
+    previous_doc = ""
+    page_counter = 0
+    for split in splits:
+        
+        split.metadata["page_len"] = len(split.page_content)
+
+        if previous_doc != split.metadata["name"]:
+            page_counter = 0
+            previous_doc = split.metadata["name"]
+            split.metadata["page_num"] = page_counter
+        else:
+            split.metadata["page_num"] = page_counter
+            page_counter += 1
+
+
 def check_already_indexed(filename, collection):
     #chroma_client = chromadb.PersistentClient(path = persist_directory)
     #collection = chroma_client.get_collection(name = collection_name)
