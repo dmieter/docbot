@@ -16,8 +16,10 @@ from typing import List
 
 from datetime import datetime
 
-#MBEDDINGS_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-CONTEXT_DOC_NUMBER = 5
+MAX_CONTEXT_DOC_NUMBER = 100 # maximum number of docs for llm
+MAX_RELATED_DOCS_NUMBER = 5 # maximum number of neighbour docs (radius)
+
+#EMBEDDINGS_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 #EMBEDDINGS_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 EMBEDDINGS_MODEL = "cointegrated/rubert-tiny2"
 
@@ -72,6 +74,17 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
             doc.metadata["score"] = similarity
             doc.metadata["len"] = len(doc.page_content)
 
+        retrieved_docs = self.select_best(docs_and_similarities)
+        
+        if "neighbours" in self.search_kwargs.keys():
+            result_docs = self.retrieve_with_neighbours(retrieved_docs)
+        else:
+            result_docs = retrieved_docs
+
+        return result_docs    
+    
+    # returns first s docs by score and first t by time from the rest over threshold
+    def select_best(self, docs_and_similarities):
         retrieved_docs = [doc for doc, _ in docs_and_similarities]
         result_docs = []
         
@@ -91,19 +104,106 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
         
         return result_docs
 
+
+    # retrieves best docs with neighbor parts of the same document
+    def retrieve_with_neighbours(self, docs_and_similarities):
+        neighbours_sizes = self.search_kwargs["neighbours"]
+        result_docs = []
+
+        i = 0
+        for i, doc in enumerate(docs_and_similarities):
+            radius_size = neighbours_sizes[i] if i < len(neighbours_sizes) else 0
+            result_docs.extend(self.retrieve_neighbours(doc, radius_size))
+
+        return self.remove_duplicate_docs(result_docs)
+
+    def retrieve_related_docs(self, doc):
+
+        source_name = doc.metadata['name']
+        source_upload_id = doc.metadata['upload_id']
+        source_page_num = doc.metadata['page_num']
+        related_docs = {}
+
+        data = self.vectorstore.get()
+        for idx in range(len(data['ids'])):
+
+            id = data['ids'][idx]
+            metadata = data['metadatas'][idx]
+
+            if (
+                all(key in metadata.keys() for key in ['name', 'upload_id', 'page_num'])
+                and metadata['upload_id'] == source_upload_id
+                and metadata['name'] == source_name
+                and source_page_num - MAX_RELATED_DOCS_NUMBER < metadata['page_num'] < source_page_num + MAX_RELATED_DOCS_NUMBER 
+            ):
+                related_docs[metadata['page_num']] = Document(page_content=data['documents'][idx],
+                                                              metadata=metadata)
+                
+        return related_docs
+            
+    def retrieve_neighbours(self, doc, half_size):
+        if not all(key in doc.metadata.keys() for key in ['name', 'upload_id', 'page_num']):
+            return [doc]
+        
+        # get docs from the same document and upload_id (to get relevant pages)
+        related_docs = self.retrieve_related_docs(doc)
+
+        neighbor_docs = []
+        source_page_num = doc.metadata['page_num']
+        before_sum, after_sum = 0, 0
+
+        # get docs before page_num up to half_size in total
+        added = True
+        page_counter = source_page_num
+        while(added):
+            added = False
+            page_counter -= 1
+            if page_counter in related_docs.keys():
+                neighbour_doc = related_docs[page_counter]
+                if neighbour_doc.metadata['page_len'] + before_sum < half_size:
+                    neighbor_docs.append(neighbour_doc)
+                    before_sum += neighbour_doc.metadata['page_len']
+                    added = True
+
+        # append source doc with page_num
+        neighbor_docs.append(doc)
+
+        # get docs after page_num up to half_size in total
+        added = True
+        page_counter = source_page_num
+        while(added):
+            added = False
+            page_counter += 1
+            if page_counter in related_docs.keys():
+                neighbour_doc = related_docs[page_counter]
+                if neighbour_doc.metadata['page_len'] + after_sum < half_size:
+                    neighbor_docs.append(neighbour_doc)
+                    after_sum += neighbour_doc.metadata['page_len']
+                    added = True          
+                
+
+        return sorted(neighbor_docs, key=lambda d: d.metadata['page_num'], reverse=False)
+
+    def remove_duplicate_docs(self, docs):
+        docs_dict = {}
+        for doc in docs:
+            docs_dict["{}:{}:{}".format(doc.metadata["upload_id"], doc.metadata["name"], doc.metadata["page_num"])] = doc # storing each doc as upload_id:name:page_num
+
+        return list(docs_dict.values())
+
     
 
 
-QA_COURCES_DICT = {}
 
 def get_doc_with_description(doc):
-    return "Название Документа: {} от {}\n Содержимое:{}".format(doc.metadata['name'], doc.metadata['date'], doc.page_content)
+    return " Название Документа: {} от {}\n Страница: {}\n\n{}".format(doc.metadata['name'], doc.metadata['date'], doc.metadata['page_num'], doc.page_content)
 
 def format_docs(docs):
-    head = "Сегодня {}\n =================== \n".format(datetime.today().strftime('%Y%m%d'))
-    docs_num = CONTEXT_DOC_NUMBER if (len(docs) > CONTEXT_DOC_NUMBER) else len(docs)
-    formatted_docs = head + "\n =================== \n".join(get_doc_with_description(docs[i]) for i in range(docs_num))
+    head = "Сегодня {}\n===================\n".format(datetime.today().strftime('%Y-%m-%d'))
+    docs_num = MAX_CONTEXT_DOC_NUMBER if (len(docs) > MAX_CONTEXT_DOC_NUMBER) else len(docs)
+    formatted_docs = head + "\n===================\n".join(get_doc_with_description(docs[i]) for i in range(docs_num))
     print(formatted_docs)
+    print(len(formatted_docs))
     return formatted_docs
 
 
@@ -111,20 +211,24 @@ embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
 llm = GigaChat(verify_ssl_certs=False)  
 
                                                                     # retrieve r_k with score > threshold, pick r_s by score and then r_t by time
-def prepareAnswerChain(db_path, collection_name, embeddings, llm, prompt, threshold=0.185, k = 4, s = 2, t = 1):
+def prepareAnswerChain(db_path, collection_name, embeddings, llm, prompt, search_args):
   chroma_client = chromadb.PersistentClient(path=db_path)
   vectorstore = Chroma(
       client=chroma_client,
       collection_name=collection_name,
       embedding_function=embeddings
   )
-  print("Size:" + str(vectorstore._collection.count()))
+  collection_size = vectorstore._collection.count()
+  print("Size:" + str(collection_size))
+
+  if collection_size == 0:
+      return None, None     # do not return and process empty collections
     
   #retriever = vectorstore.as_retriever()      
   retriever = MyVectorStoreRetriever(
     vectorstore=vectorstore,
     search_type="similarity_score_threshold",
-    search_kwargs={"score_threshold": threshold, "k": k, "s" : s, "t" : t}, # retrieve k with score > threshold, pick s by score and then t by time
+    search_kwargs=search_args # retrieve k with score > threshold, pick s by score and then t by time
   )
 
   rag_chain = (
@@ -136,7 +240,6 @@ def prepareAnswerChain(db_path, collection_name, embeddings, llm, prompt, thresh
 
 
   return rag_chain, retriever
-
 
 #general_answer_chain = prepareAnswerChain("./chroma_db", "mpei_docs", embeddings, llm, custom_prompt)
 #obrpravo_answer_chain = prepareAnswerChain("./chroma_db", "mpei_obrpravo", embeddings, llm, obrpravo_prompt)

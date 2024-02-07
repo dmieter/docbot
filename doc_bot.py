@@ -46,9 +46,12 @@ def init():
     db_path = get_config_value('db_path', category, config['default'])
     retriever = get_config_value('retriever', category, config['default'])
 
-    answer_chain, retriever = dc.prepareAnswerChain(db_path, category_name, dc.embeddings, dc.llm, prompt, threshold=retriever['threshold'], k=retriever['k'], s=retriever['s'], t=retriever['t'])
-    answer_chains[display_name] = answer_chain
-    retrievers[display_name] = retriever
+    answer_chain, retriever = dc.prepareAnswerChain(db_path, category_name, dc.embeddings, dc.llm, prompt, 
+                                                    search_args={"score_threshold": retriever['threshold'], "k": retriever['k'], "s" : retriever['s'], "t" : retriever['t'], "neighbours": [1500, 1000]})
+    
+    if answer_chain:
+      answer_chains[display_name] = answer_chain
+      retrievers[display_name] = retriever
 
 
 @bot.message_handler(commands=['reload'])

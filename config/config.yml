@@ -4,9 +4,9 @@ categories:
     prompt: "obr_pravo"
     retriever: 
       threshold: 0.185
-      k: 4
-      s: 2
-      t: 1
+      k: 3
+      s: 3
+      t: 0
   mpei-new-orders:
     display_name: "Приказы МЭИ"
     prompt: "mpei_orders"
@@ -20,9 +20,9 @@ categories:
     prompt: "general"
     retriever: 
       threshold: 0.185
-      k: 4
-      s: 2
-      t: 1
+      k: 3
+      s: 3
+      t: 0
 default:
   knowledge_base: "Приказы МЭИ"
   db_path: "./chroma_db"
