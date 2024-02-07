@@ -1,0 +1,1 @@
+ocrmypdf -l rus --sidecar output.txt --force-ocr doc_scanned.pdf doc_texted.pdf
