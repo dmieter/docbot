@@ -44,10 +44,10 @@ def init():
 
     display_name = category['display_name']
     db_path = get_config_value('db_path', category, config['default'])
-    retriever = get_config_value('retriever', category, config['default'])
+    retriever_config = get_config_value('retriever', category, config['default'])
 
-    answer_chain, retriever = dc.prepareAnswerChain(db_path, category_name, dc.embeddings, dc.llm, prompt, 
-                                                    search_args={"score_threshold": retriever['threshold'], "k": retriever['k'], "s" : retriever['s'], "t" : retriever['t'], "neighbours": [1500, 1000]})
+    answer_chain, retriever = dc.prepareAnswerChain(db_path, category_name, dc.embeddings, dc.llm, prompt, search_args=retriever_config)
+                                                    #search_args={"score_threshold": retriever['threshold'], "k": retriever['k'], "s" : retriever['s'], "t" : retriever['t'], "neighbours": [1500, 1000]})
     
     if answer_chain:
       answer_chains[display_name] = answer_chain
@@ -74,14 +74,30 @@ def start(message):
 В дальнейшем для выбора категории можно использовать команду /category""")
 
 
+def prepare_links(docs):
+  references_str = "\n"
+  references = set()
+
+  for doc in docs:
+    if "url" in doc.metadata.keys() and doc.metadata["url"]:
+      references.add(doc.metadata["url"])
+
+  if len(references) > 0:
+    references_str += '\n'.join(list(references))
+
+  return references_str
+
 def prepare_answer(question, knowledge):
 
   if knowledge in answer_chains.keys():
     answer = answer_chains[knowledge].invoke(question)
+
+    related_docs = retrievers[knowledge].get_relevant_documents(question)
+    answer += prepare_links(related_docs)
+    print("Retrieved docs: {}".format(related_docs))
+
   else:
     answer = "Документы по категории {} еще готовятся".format(knowledge)
-
-  print("Retrieved docs: {}".format(dc.format_docs(retrievers[knowledge].get_relevant_documents(question))))
 
   return answer
 
@@ -96,13 +112,13 @@ def general_question(message):
   else:
     chat = bot.get_chat(message.chat.id)
     question = message.text
-    print(str(datetime.now()) + " " + str(message.chat.id) + " Q: " + question)
+    print(">>>>>>>>>>>>>>> QQQ: " + str(datetime.now()) + " " + str(message.chat.id) + ": " + question)
 
     trimmed_question = question[:800] if len(question) > 800 else question
     knowledge_base = chat.pinned_message.text if chat.pinned_message else config['default']['knowledge_base']
-    answer = prepare_answer(trimmed_question, knowledge_base)
+    answer = prepare_answer(trimmed_question, knowledge_base).replace('_', ' ')
     
-    print(str(message.chat.id) + " A: " + answer)
+    print(">>>>>>>>>>>>>>> AAA " + str(message.chat.id) + ": " + answer)
     suffix = """\n*{}.*""".format(knowledge_base)
     bot.reply_to(message, answer + suffix, parse_mode = 'Markdown')
 

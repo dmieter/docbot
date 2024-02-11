@@ -78,6 +78,8 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
         
         if "neighbours" in self.search_kwargs.keys():
             result_docs = self.retrieve_with_neighbours(retrieved_docs)
+        elif "next" in self.search_kwargs.keys():
+            result_docs = self.retrieve_with_next(retrieved_docs)
         else:
             result_docs = retrieved_docs
 
@@ -114,6 +116,14 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
         for i, doc in enumerate(docs_and_similarities):
             radius_size = neighbours_sizes[i] if i < len(neighbours_sizes) else 0
             result_docs.extend(self.retrieve_neighbours(doc, radius_size))
+
+        return self.remove_duplicate_docs(result_docs)
+    
+    def retrieve_with_next(self, docs_and_similarities):
+        result_docs = []
+
+        for doc in docs_and_similarities:
+            result_docs.extend(self.retrieve_next(doc))
 
         return self.remove_duplicate_docs(result_docs)
 
@@ -183,6 +193,24 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
                 
 
         return sorted(neighbor_docs, key=lambda d: d.metadata['page_num'], reverse=False)
+    
+    def retrieve_next(self, doc):
+        if not all(key in doc.metadata.keys() for key in ['name', 'upload_id', 'page_num']):
+            return [doc]
+        
+        # get docs from the same document and upload_id (to get relevant pages)
+        related_docs = self.retrieve_related_docs(doc)
+
+        result_docs = [doc]
+        source_page_num = doc.metadata['page_num']
+        next_page = source_page_num + 1
+        if next_page in related_docs.keys():
+            result_docs.append(related_docs[next_page])
+        else:
+            print("WARNING: next page not found for {}".format(doc))    
+
+        return result_docs    
+
 
     def remove_duplicate_docs(self, docs):
         docs_dict = {}
@@ -196,14 +224,14 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
 
 
 def get_doc_with_description(doc):
-    return " Название Документа: {} от {}\n Страница: {}\n\n{}".format(doc.metadata['name'], doc.metadata['date'], doc.metadata['page_num'], doc.page_content)
+    return " Название Документа: {} от {}\n Блок: {}\n\n{}".format(doc.metadata['name'], doc.metadata['date'], doc.metadata['page_num'], doc.page_content)
 
 def format_docs(docs):
     head = "Сегодня {}\n===================\n".format(datetime.today().strftime('%Y-%m-%d'))
     docs_num = MAX_CONTEXT_DOC_NUMBER if (len(docs) > MAX_CONTEXT_DOC_NUMBER) else len(docs)
     formatted_docs = head + "\n===================\n".join(get_doc_with_description(docs[i]) for i in range(docs_num))
-    print(formatted_docs)
-    print(len(formatted_docs))
+    #print(formatted_docs)
+    #print(len(formatted_docs))
     return formatted_docs
 
 
