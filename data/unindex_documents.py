@@ -3,12 +3,12 @@ import index_core as ic
 
 COMMAND = ic.loadArgument(1, "rm_col")         #expire/doc/created/rm_col
 DB_DIR = ic.loadArgument(2, "./chroma_db")
-FILTER = ic.loadArgument(3, "mpei-new-orders")
+FILTER = ic.loadArgument(3, "internal_knowledge")
 COLLECTION = ic.loadArgument(4, "")
 
 def process_command():
 
-    chroma_client = chromadb.PersistentClient(path="./chroma_db")
+    chroma_client = chromadb.PersistentClient(path=DB_DIR)
 
     if 'RM_COL' == COMMAND.upper():         # REMOVE WHOLE COLLECTION
         if ic.check_collection_exists(chroma_client, FILTER):
