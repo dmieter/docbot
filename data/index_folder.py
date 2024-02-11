@@ -1,6 +1,7 @@
 
 from langchain.document_loaders import DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 import chromadb
 import pandas as pd
@@ -11,13 +12,13 @@ import index_core as ic
 
 
 # 0. LOAD INPUT ARGUMENTS
-INPUT_DIR = ic.loadArgument(1, '../pdf/mpei/obr_pravo/index/')
-SUFFIX = ic.loadArgument(2, '.pdf.txt')
-CHUNK_SIZE = int(ic.loadArgument(3, 1200))
-CHUNK_OVERLAP_SIZE = int(ic.loadArgument(4, 300))
+INPUT_DIR = ic.loadArgument(1, 'pdf/mpei/internal_knowledge/index')
+SUFFIX = ic.loadArgument(2, '.txt')
+CHUNK_SIZE = int(ic.loadArgument(3, 0))     # 0 means split by regex separator only
+CHUNK_OVERLAP_SIZE = int(ic.loadArgument(4, 0))
 DB_DIR = ic.loadArgument(5, "./chroma_db")
-COLLECTION = ic.loadArgument(6, "obr_pravo")
-META_FILE_CSV = ic.loadArgument(7, "../pdf/mpei/obr_pravo/index/metadata.csv")
+COLLECTION = ic.loadArgument(6, "information")
+META_FILE_CSV = ic.loadArgument(7, "pdf/mpei/internal_knowledge/metadata.csv")
 
 #index_folder.py . .pdf.txt 800 150 ./chroma_db mpei_all metadata.csv
 
@@ -75,7 +76,14 @@ def process_command():
 
     print(len(docs_to_index))
     if(len(docs_to_index) > 0):
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP_SIZE)
+        if CHUNK_SIZE > 0: 
+            # split to chunks by size
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP_SIZE)
+        else:
+            # else split by separator '^=+$'
+            #text_splitter = CharacterTextSplitter(chunk_size=0, chunk_overlap=0, separator=r"\n=+\n", is_separator_regex=True)   
+            text_splitter = CharacterTextSplitter(chunk_size=0, chunk_overlap=0, separator=r"={5,}", is_separator_regex=True)   # separator is 5= and more (=====)
+        
         splits = text_splitter.split_documents(docs_to_index)
         ic.numberize_splits(splits)
         print(len(splits))

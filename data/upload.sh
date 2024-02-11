@@ -6,7 +6,7 @@
 
 #./upload.sh index/urls.txt 20 index/
 
-urls=$(grep  -v '^#' $1 | grep 'pdf$')  # load all not commented lines from first argument
+urls=$(grep  -v '^#' $1 | grep -o '[^;]\+pdf$')  # load all not commented lines ending with pdf
 
 download_max=$2
 download_num=0

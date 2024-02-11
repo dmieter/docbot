@@ -5,9 +5,10 @@ import index_core as ic
 
 
 # 0. LOAD INPUT ARGUMENTS
-COMMAND = ic.loadArgument(1, "expire") # list/data/docs/expire/expired
+COMMAND = ic.loadArgument(1, "doc") # list/data/docs/expire/expired
 DB_DIR = ic.loadArgument(2, "./chroma_db")
-COLLECTION = ic.loadArgument(3, "obr_pravo")
+COLLECTION = ic.loadArgument(3, "internal_knowledge")
+DOC_ID = ic.loadArgument(4, "f1fd1772-c8ae-11ee-a602-d70abbf3fc2e")
 
 
 chroma_client = chromadb.PersistentClient(path = DB_DIR)
@@ -35,10 +36,14 @@ def process_command():
     output = set()
     
     if 'DATA' == COMMAND.upper():
-        for metadata in data['metadatas']:
+        for idx in range(len(data['ids'])):
+
+            id = data['ids'][idx]
+            metadata = data['metadatas'][idx]
+
             url = metadata['url'] if 'url' in metadata.keys() else ''
             expire_date = metadata['expire_date'] if 'expire_date' in metadata.keys() else ''
-            output.add("{};{};{};{}".format(metadata['date'], expire_date, metadata['name'], url))
+            output.add("{} {};{};{};{}".format(id, metadata['date'], expire_date, metadata['name'], url))
 
         output = sorted(output)
         for line in output:
@@ -54,6 +59,9 @@ def process_command():
             print(line)
         return
     
+    if 'DOC' == COMMAND.upper():
+        print(collection.get(ids=[DOC_ID]))
+        return
     
     if 'EXPIRED' == COMMAND.upper():
         today = ic.today_str()

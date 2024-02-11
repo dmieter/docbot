@@ -1,5 +1,6 @@
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 import pandas as pd
 from datetime import datetime
@@ -39,7 +40,13 @@ for doc in docs:
 
 # 3. SPLIT AND STORE DOCUMENTS
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP_SIZE)
+if CHUNK_SIZE > 0: 
+    # split to chunks by size
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP_SIZE)
+else:
+    # else split by separator '^=+$'
+    text_splitter = CharacterTextSplitter(chunk_size=0, chunk_overlap=0, separator=r"\n=+\n", is_separator_regex=True)   
+        
 splits = text_splitter.split_documents(docs)
 ic.numberize_splits(splits)
 print(len(splits))

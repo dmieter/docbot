@@ -38,9 +38,11 @@ def list_all_docs():
             date_parts = date.split('.')
             date = date_parts[2]+"-"+date_parts[1]+"-"+date_parts[0]
 
-        expire_date = date_add_days(date, 120) # expires in 4 monthes by default
+        expire_date = date_add_days(date, 120) # expires in 4 months by default
         metadata = date + ";" + expire_date + ";" + filename + ";" + name + ";" + href
-        if date > "2023-12-01":
+        if date > "2024-01-01":
             print(metadata)
 # %% TEST   
 list_all_docs()
+
+# use "uniq filename" for the result!
