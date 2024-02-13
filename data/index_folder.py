@@ -12,13 +12,13 @@ import index_core as ic
 
 
 # 0. LOAD INPUT ARGUMENTS
-INPUT_DIR = ic.loadArgument(1, 'pdf/mpei/internal_knowledge/index')
-SUFFIX = ic.loadArgument(2, '.txt')
+INPUT_DIR = ic.loadArgument(1, 'pdf/mpei/mpei-orders/index')
+SUFFIX = ic.loadArgument(2, '.pdf.txt')
 CHUNK_SIZE = int(ic.loadArgument(3, 0))     # 0 means split by regex separator only
 CHUNK_OVERLAP_SIZE = int(ic.loadArgument(4, 0))
-DB_DIR = ic.loadArgument(5, "./chroma_db")
-COLLECTION = ic.loadArgument(6, "information")
-META_FILE_CSV = ic.loadArgument(7, "pdf/mpei/internal_knowledge/metadata.csv")
+DB_DIR = ic.loadArgument(5, "chroma_db")
+COLLECTION = ic.loadArgument(6, "mpei_orders")
+META_FILE_CSV = ic.loadArgument(7, "pdf/mpei/mpei-orders/202401_mpei_urls.txt")
 
 #index_folder.py . .pdf.txt 800 150 ./chroma_db mpei_all metadata.csv
 
@@ -38,7 +38,7 @@ def process_command():
 
     if len(META_FILE_CSV) > 0:     # load only documents described in metadata csv
         print("Setting metadata from " + META_FILE_CSV)
-        df_metadata = pd.read_csv(META_FILE_CSV, names=["date", "expire_date", "filename", "name", "url"], delimiter=";")
+        df_metadata = pd.read_csv(META_FILE_CSV, names=["date", "expire_date", "filename", "name", "url", "desc"], delimiter=";")
         for doc in docs:
             source_file, source_file_origin = ic.retrieve_filename(doc.metadata['source'])
             metadata = df_metadata[(df_metadata.filename == source_file) | (df_metadata.filename == source_file_origin)]
@@ -49,8 +49,13 @@ def process_command():
                     doc.metadata['upload_id'] = current_time_in_seconds
                     doc.metadata['name'] = metadata['name']
                     doc.metadata['date'] = str(metadata['date'])
+                    doc.metadata['date_int'] = int(metadata['date'].replace('-', ''))
                     doc.metadata['expire_date'] = str(metadata['expire_date'])
-                    doc.metadata['url'] = str(metadata['url'])
+                    if metadata['url']:
+                        doc.metadata['url'] = metadata['url']
+                    if metadata['desc']:
+                        doc.metadata['desc'] = metadata['desc']
+
                     docs_to_index.append(doc)
                 else:
                     print("File {} already indexed in {}".format(metadata['name'], COLLECTION))   
@@ -65,6 +70,7 @@ def process_command():
                 doc.metadata['upload_id'] = current_time_in_seconds
                 doc.metadata['name'] = source_file_origin
                 doc.metadata['date'] = today
+                doc.metadata['date_int'] = int(today.replace('-', ''))
                 doc.metadata['expire_date'] = ic.date_add_days(today, 90) # 3 monthes expiration by default
             else:
                 print("File {} already indexed in {}".format(source_file), COLLECTION)

@@ -3,7 +3,7 @@ import index_core as ic
 
 COMMAND = ic.loadArgument(1, "rm_col")         #expire/doc/created/rm_col
 DB_DIR = ic.loadArgument(2, "./chroma_db")
-FILTER = ic.loadArgument(3, "internal_knowledge")
+FILTER = ic.loadArgument(3, "mpei_orders")
 COLLECTION = ic.loadArgument(4, "")
 
 def process_command():

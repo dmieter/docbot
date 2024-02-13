@@ -33,6 +33,7 @@ for doc in docs:
     doc.metadata['upload_id'] = current_time_in_seconds
     doc.metadata['name'] = source_file_origin
     doc.metadata['date'] = today
+    doc.metadata['date_int'] = int(today.replace('-', ''))
     doc.metadata['expire_date'] = ic.date_add_days(today, EXPIRE_DAYS)
                 
 
