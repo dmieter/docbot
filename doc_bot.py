@@ -98,7 +98,8 @@ def prepare_links(docs):
 
   for doc in docs:
     if "url" in doc.metadata.keys() and doc.metadata["url"]:
-      references.add(doc.metadata["url"])
+      #references.add(doc.metadata["url"])
+      references.add("<a href='{}'>{}</a>".format(doc.metadata["url"], doc.metadata["name"]))
 
   if len(references) > 0:
     references_str += '\n'.join(list(references))
@@ -137,8 +138,9 @@ def general_question(message):
     answer = prepare_answer(trimmed_question, knowledge_base).replace('_', ' ')
     
     print(">>>>>>>>>>>>>>> AAA " + str(message.chat.id) + ": " + answer)
-    suffix = """\n*{}.*""".format(knowledge_base)
-    bot.reply_to(message, answer + suffix, parse_mode = 'Markdown')
+    suffix = """\n<b>{}.</b>""".format(knowledge_base)
+    #bot.reply_to(message, answer + suffix, parse_mode = 'Markdown')
+    bot.reply_to(message, answer + suffix, parse_mode = 'HTML')
 
 init()
 print(str(datetime.now()) + " Doc is here!")
