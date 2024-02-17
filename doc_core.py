@@ -10,10 +10,13 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import create_citation_fuzzy_match_chain
 
 from langchain.schema.vectorstore import VectorStoreRetriever
+from langchain.retrievers import BM25Retriever
 from langchain.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain.schema.document import Document
 from typing import List
 
+import yaml
+import string
 from datetime import datetime
 
 MAX_CONTEXT_DOC_NUMBER = 100 # maximum number of docs for llm
@@ -56,6 +59,18 @@ prompts = {"general" : prompt_template_ru, "mpei_orders" : prompt_mpei_orders, "
 #custom_prompt = PromptTemplate.from_template(prompt_template_ru)
 #obrpravo_prompt = PromptTemplate.from_template(prompt_obr_pravo)
 
+def load_properties_file():
+  with open('config/properties.yml', 'r') as file:
+      properties = yaml.safe_load(file)
+      print("properties loaded: {}".format(properties))
+
+  return properties    
+
+properties = load_properties_file()
+
+def tokenize(s: str) -> list[str]:
+    """Очень простая функция разбития предложения на слова"""
+    return s.lower().translate(str.maketrans("", "", string.punctuation)).split(" ")
 
 class MyVectorStoreRetriever(VectorStoreRetriever):
     # See https://github.com/langchain-ai/langchain/blob/61dd92f8215daef3d9cf1734b0d1f8c70c1571c3/libs/langchain/langchain/vectorstores/base.py#L500
@@ -74,7 +89,15 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
             doc.metadata["len"] = len(doc.page_content)
 
         retrieved_docs = self.select_best(docs_and_similarities)
-        
+
+        # additionally search documents by different text search algorithm (without embeddings)
+        if "bm25" in self.search_kwargs.keys():
+            bm25_args = self.search_kwargs["bm25"].split("/")
+            select_num = int(bm25_args[0])
+            select_from_num = int(bm25_args[1])
+            additional_docs = self.select_by_bm25(query, select_num, select_from_num) # additionally select like 3/50 by BM25
+            retrieved_docs.extend(additional_docs)
+
         if "neighbours" in self.search_kwargs.keys():
             result_docs = self.retrieve_with_neighbours(retrieved_docs)
         elif "next" in self.search_kwargs.keys():
@@ -84,6 +107,17 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
 
         return result_docs    
     
+    def select_by_bm25(self, query, select_num, select_from_num):
+        similar_docs = self.vectorstore.similarity_search(query, k=select_from_num)
+        bm25 = BM25Retriever.from_documents(documents=similar_docs, preprocess_func=tokenize,k=select_num)
+        result_docs = bm25.get_relevant_documents(query)
+
+        for doc in result_docs:
+            doc.metadata['retriever'] = 'BM25'
+
+        return result_docs
+
+
     # returns first s docs by score and first t by time from the rest over threshold
     def select_best(self, docs_and_similarities):
         retrieved_docs = [doc for doc, _ in docs_and_similarities]
@@ -103,6 +137,9 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
         else:
             result_docs = retrieved_docs
         
+        for doc in result_docs:
+            doc.metadata['retriever'] = 'SIMILARITY'
+
         return result_docs
 
 
@@ -229,6 +266,10 @@ def format_docs(docs):
     head = "Сегодня {}\n===================\n".format(datetime.today().strftime('%Y-%m-%d'))
     docs_num = MAX_CONTEXT_DOC_NUMBER if (len(docs) > MAX_CONTEXT_DOC_NUMBER) else len(docs)
     formatted_docs = head + "\n===================\n".join(get_doc_with_description(docs[i]) for i in range(docs_num))
+
+    if "stoplist" in properties.keys():
+        for word in properties["stoplist"]:
+            formatted_docs = formatted_docs.replace(word, "")
     print(formatted_docs)
     #print(len(formatted_docs))
     return formatted_docs
@@ -236,6 +277,10 @@ def format_docs(docs):
 
 embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
 llm = GigaChat(verify_ssl_certs=False)  
+
+from langchain.cache import InMemoryCache
+import langchain
+langchain.llm_cache = InMemoryCache()
 
                                                                     # retrieve r_k with score > threshold, pick r_s by score and then r_t by time
 def prepareAnswerChain(db_path, collection_name, embeddings, llm, prompt, search_args):

@@ -1,34 +1,49 @@
 categories:
+  information:
+    display_name: "Общая информация"
+    prompt: "general"
+    retriever: 
+      score_threshold: 0.25
+      k: 3
+      s: 3
+      t: 0
+      next: 1
+      bm25: "2/25"
+  mpei_orders:
+    display_name: "Приказы МЭИ 2024"
+    prompt: "mpei_orders"
+    retriever: 
+      score_threshold: 0.185
+      k: 6
+      s: 2
+      t: 1
+      next: 1
+      bm25: "3/50"
   obr_pravo:
     display_name: "Образовательное право"
     prompt: "obr_pravo"
     retriever: 
-      threshold: 0.185
+      score_threshold: 0.185
       k: 3
       s: 3
       t: 0
-  mpei-new-orders:
-    display_name: "Приказы МЭИ"
-    prompt: "mpei_orders"
-    retriever: 
-      threshold: 0.185
-      k: 4
-      s: 2
-      t: 1
+      neighbours: [1500, 1000]    
   bars_lecturer:
     display_name: "БаРС для сотрудников"
     prompt: "general"
     retriever: 
-      threshold: 0.185
+      score_threshold: 0.185
       k: 3
       s: 3
       t: 0
+      neighbours: [1500, 1000]
 default:
   knowledge_base: "Приказы МЭИ"
   db_path: "./chroma_db"
   prompt: "general"
   retriever: 
-    threshold: 0.185
+    score_threshold: 0.185
     k: 4
     s: 2
     t: 1
+stoplist: ["Усманов", "Новак"]
