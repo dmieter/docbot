@@ -16,11 +16,11 @@ def date_add_days(date_str, days):
     date_plus = date_obj + timedelta(days)
     return date_plus.strftime('%Y-%m-%d')
 
-def retrieve_all_docs(from_date):
+def retrieve_recent_docs(number = 100, from_date = '2024-01-01'):
     req = Request(MPEI_URL)
     response = urlopen(req).read()
 
-    docs = []
+    docs = set()
     
     soup = bs(response, features='html.parser')
     links = soup.find_all('div', class_ = "link-item")
@@ -46,25 +46,22 @@ def retrieve_all_docs(from_date):
 
         expire_date = date_add_days(date, 120) # expires in 4 months by default
         if date > from_date:
-            docs.append((date, expire_date, filename, name ,href, desc))
+            docs.add((date, expire_date, filename, name ,href, desc))
 
 
-    return docs
+    retrieve_num = min(len(docs), number)
+    
+    return sorted(list(docs), reverse=True)[:retrieve_num]
 
 def list_all_docs(from_date):
-    links_set = set()
-    docs = retrieve_all_docs(from_date)
+    docs = retrieve_recent_docs(from_date = from_date, number = 1000)
 
     for date, expire_date, filename, name ,href, desc in docs:
         metadata = date.replace(";", "") + ";" + expire_date.replace(";", "") + ";" + filename.replace(";", "") + ";" + name.replace(";", "") + ";" + href.replace(";", "") + ";" + desc.replace(";", "").replace("\r\n", " ")
-        links_set.add(metadata)
-
-    links_list = sorted(list(links_set), reverse=False)
-    for link in links_list:
-        print(link)    
+        print(metadata)  
 
 
 
 
 # %% TEST   
-list_all_docs("2024-01-01")
+list_all_docs("2024-02-14")

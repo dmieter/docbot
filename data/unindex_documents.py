@@ -1,10 +1,14 @@
 import chromadb
 import index_core as ic
 
-COMMAND = ic.loadArgument(1, "rm_col")         #expire/doc/created/rm_col
+#COMMAND = ic.loadArgument(1, "rm_col")         #expire/doc/created/rm_col
 DB_DIR = ic.loadArgument(2, "./chroma_db")
-FILTER = ic.loadArgument(3, "mpei_orders")
-COLLECTION = ic.loadArgument(4, "")
+#FILTER = ic.loadArgument(3, "mpei_orders")
+#COLLECTION = ic.loadArgument(4, "")
+
+COMMAND = ic.loadArgument(1, "doc")
+FILTER = ic.loadArgument(3, "ПРИКАЗ от 14 февраля 2024 года № 117")
+COLLECTION = ic.loadArgument(4, "mpei_orders")
 
 def process_command():
 
@@ -42,21 +46,21 @@ def process_command():
                 if expire_date_str < today:
                     ids_to_remove.append(id)
                 
-                break    
+                continue    
 
             if 'DOC' == COMMAND.upper():        # REMOVE DOCUMENTS BY NAME
 
                 if FILTER == metadata['name']:
                     ids_to_remove.append(id)
                 
-                break 
+                continue 
 
             if 'CREATED' == COMMAND.upper():    # REMOVE DOCUMENTS CREATED BEFORE DATE
 
                 if metadata['date'] < FILTER:
                     ids_to_remove.append(id)
                 
-                break   
+                continue   
 
         print("Removing ids {} from collection {} according to command {}".format(ids_to_remove, collection.name, COMMAND))
         if len(ids_to_remove) > 0:
