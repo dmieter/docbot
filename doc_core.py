@@ -31,17 +31,16 @@ prompt_template_eng = """Use the following pieces of context to answer the quest
       Question: {question}
       Helpful Answer:"""
 prompt_template_ru = """Действуй как высококлассный юрист-специалист и используй для ответа на вопрос приведенные ниже документы.
-      Ответ должен содержать максимум подробностей из приведенных документов.
-      От точности ответа зависит качество образования в стране!
+      От точности и подробности ответа зависит качество образования в стране!
       Документы: {context}
-      Вопрос: {question}; В каких документах можно найти детали?
+      Вопрос: {question}; расскажи подробности. В каких документах можно посмотреть дополнительные детали?
       Ответ специалиста:"""
 
 prompt_mpei_orders = """Действуй как высококлассный юрист-секретарь кафедры и используй для ответа на вопрос приведенные ниже документы.
       От подробности ответа зависит качество образования в стране!
       Если данных для ответа не хватает, то дай рекомендацию, как лучше уточнить вопрос.
       Документы: {context}
-      Вопрос: {question}; В каком приказе можно посмотреть детали?
+      Вопрос: {question}; расскажи подробности. В каком приказе можно посмотреть детали? 
       Ответ специалиста:"""
 
 prompt_obr_pravo = """Действуй как высококлассный юрист-специалист и используй для ответа на вопрос приведенные ниже документы.
@@ -230,7 +229,7 @@ def format_docs(docs):
     head = "Сегодня {}\n===================\n".format(datetime.today().strftime('%Y-%m-%d'))
     docs_num = MAX_CONTEXT_DOC_NUMBER if (len(docs) > MAX_CONTEXT_DOC_NUMBER) else len(docs)
     formatted_docs = head + "\n===================\n".join(get_doc_with_description(docs[i]) for i in range(docs_num))
-    #print(formatted_docs)
+    print(formatted_docs)
     #print(len(formatted_docs))
     return formatted_docs
 
@@ -269,5 +268,17 @@ def prepareAnswerChain(db_path, collection_name, embeddings, llm, prompt, search
 
   return rag_chain, retriever
 
+
 #general_answer_chain = prepareAnswerChain("./chroma_db", "mpei_docs", embeddings, llm, custom_prompt)
 #obrpravo_answer_chain = prepareAnswerChain("./chroma_db", "mpei_obrpravo", embeddings, llm, obrpravo_prompt)
+
+def extract_arg(message):
+    return message.split()[1:]
+
+def extract_arg_num(message, num, default):
+    args = extract_arg(message)
+    print(args)
+    if len(args) > num:
+        return int(args[num])
+    else: 
+        return default

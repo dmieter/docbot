@@ -7,6 +7,7 @@ from datetime import datetime
 from telebot import types
 import doc_core as dc
 import yaml
+from data import list_mpei_documents as lmd
 
 BOT_TOKEN = os.environ.get('DOCBOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -73,6 +74,23 @@ def start(message):
 Рекомендую сразу выбрать интересующую категорию знаний
 В дальнейшем для выбора категории можно использовать команду /category""")
 
+@bot.message_handler(commands=['new'])
+def new_mpei_orders(message):
+  docs_num = dc.extract_arg_num(message.text, 0, 10)
+  docs_num = min(docs_num, 20) # there's a limit in the message len
+  new_docs = lmd.retrieve_recent_docs(number=docs_num)
+  mpei_links = []
+  order_num = 1
+  if len(new_docs) > 0:
+    for date, expire_date, filename, name, url, desc in new_docs:
+      mpei_links.append("<a href='{}'>{}. {}</a>\n{}\n".format(url, order_num, name, desc))
+      order_num += 1
+
+    answer = "\n".join(mpei_links)
+
+  else:
+    answer = "Новых документов не найдено"
+  bot.reply_to(message, answer, parse_mode = 'HTML')
 
 def prepare_links(docs):
   references_str = "\n"
@@ -94,7 +112,7 @@ def prepare_answer(question, knowledge):
 
     related_docs = retrievers[knowledge].get_relevant_documents(question)
     answer += prepare_links(related_docs)
-    print("Retrieved docs: {}".format(related_docs))
+    #print("Retrieved docs: {}".format(related_docs))
 
   else:
     answer = "Документы по категории {} еще готовятся".format(knowledge)
