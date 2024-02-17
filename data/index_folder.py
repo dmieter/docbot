@@ -18,7 +18,7 @@ CHUNK_SIZE = int(ic.loadArgument(3, 0))     # 0 means split by regex separator o
 CHUNK_OVERLAP_SIZE = int(ic.loadArgument(4, 0))
 DB_DIR = ic.loadArgument(5, "chroma_db")
 COLLECTION = ic.loadArgument(6, "mpei_orders")
-META_FILE_CSV = ic.loadArgument(7, "pdf/mpei/mpei-orders/202401_mpei_urls.txt")
+META_FILE_CSV = ic.loadArgument(7, "pdf/mpei/mpei-orders/20240216_mpei_urls.txt")
 
 #index_folder.py . .pdf.txt 800 150 ./chroma_db mpei_all metadata.csv
 
