@@ -18,7 +18,17 @@ categories:
       s: 2
       t: 1
       next: 1
-      bm25: "3/50"
+      bm25: "3/100"
+  dpo_tes:
+    display_name: "ДПО ТЭС"
+    prompt: "mpei_orders"
+    retriever: 
+      score_threshold: 0.185
+      k: 6
+      s: 2
+      t: 1
+      next: 1
+      bm25: "3/100"
   obr_pravo:
     display_name: "Образовательное право"
     prompt: "obr_pravo"

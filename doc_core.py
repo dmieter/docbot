@@ -235,10 +235,12 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
             return [doc]
         
         # get docs from the same document and upload_id (to get relevant pages)
-        related_docs = self.retrieve_related_docs(doc)
-
-        result_docs = [doc]
         source_page_num = doc.metadata['page_num']
+        if source_page_num % 2 != 0:
+            return [doc]    # source document isn't KEYWORD SECTION, so don't need to get next
+
+        related_docs = self.retrieve_related_docs(doc)
+        result_docs = []
         next_page = source_page_num + 1
         if next_page in related_docs.keys():
             result_docs.append(related_docs[next_page])

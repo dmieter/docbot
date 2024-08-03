@@ -133,7 +133,7 @@ def general_question(message):
     question = message.text
     print(">>>>>>>>>>>>>>> QQQ: " + str(datetime.now()) + " " + str(message.chat.id) + ": " + question)
 
-    trimmed_question = question[:800] if len(question) > 800 else question
+    trimmed_question = question[:1000] if len(question) > 1000 else question
     knowledge_base = chat.pinned_message.text if chat.pinned_message else config['default']['knowledge_base']
     answer = prepare_answer(trimmed_question, knowledge_base).replace('_', ' ')
     
