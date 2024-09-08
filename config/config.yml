@@ -21,7 +21,7 @@ categories:
       bm25: "3/100"
   dpo_tes:
     display_name: "ДПО ТЭС"
-    prompt: "mpei_orders"
+    prompt: "prompt_dpo"
     retriever: 
       score_threshold: 0.185
       k: 6
@@ -29,6 +29,16 @@ categories:
       t: 1
       next: 1
       bm25: "3/100"
+  dpo_common:
+    display_name: "ДПО Общие вопросы"
+    prompt: "prompt_dpo"
+    retriever: 
+      score_threshold: 0.185
+      k: 4
+      s: 4
+      t: 0
+      next: 1
+      bm25: "4/100"
   obr_pravo:
     display_name: "Образовательное право"
     prompt: "obr_pravo"
