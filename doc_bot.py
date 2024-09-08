@@ -116,9 +116,36 @@ def prepare_answer(question, knowledge):
     #print("Retrieved docs: {}".format(related_docs))
 
   else:
-    answer = "Документы по категории {} еще готовятся".format(knowledge)
+    answer = "Документы по категории {} еще готовятся или недоступны. \nПопробуйте выбрать категорию в стартовом меню через /start или /category".format(knowledge)
 
   return answer
+
+
+def trim_question(question):
+  return question[:800] if len(question) > 800 else question
+
+def is_additional_question(question):
+  keywords = ["а", "и", "ну", "теперь", "только", "хорошо"]
+  trimmed_question = question.strip().lower()
+  if len(trimmed_question) > 0:
+    first_word = trimmed_question.split()[0]
+    return first_word in keywords or trimmed_question[0] == '>'
+  else:
+    return False
+  
+def prepare_question_chain(message):
+  # concatenate previous messages from the same user
+  prev_messages = []
+  for msg in bot.get_chat_history(message.chat.id, limit=10, offset=1):
+    
+    if msg.from_user.id == message.from_user.id:
+      prev_messages.append(trim_question(msg.text))
+      if not is_additional_question(msg.text):
+        break
+
+  if len(prev_messages) > 0:    
+    thread = '\n'.join(reversed(prev_messages))
+    return 'Предыдущие вопросы: \n' + thread + '\n' + 'Уточнение: ' + trim_question(message.text)
 
 
 @bot.message_handler(func=lambda msg: True)
@@ -133,9 +160,11 @@ def general_question(message):
     question = message.text
     print(">>>>>>>>>>>>>>> QQQ: " + str(datetime.now()) + " " + str(message.chat.id) + ": " + question)
 
-    trimmed_question = question[:800] if len(question) > 800 else question
+    question_with_context = prepare_question_chain(message)
+    print("Question with context: " + question_with_context)
+
     knowledge_base = chat.pinned_message.text if chat.pinned_message else config['default']['knowledge_base']
-    answer = prepare_answer(trimmed_question, knowledge_base).replace('_', ' ')
+    answer = prepare_answer(question_with_context, knowledge_base).replace('_', ' ')
     
     print(">>>>>>>>>>>>>>> AAA " + str(message.chat.id) + ": " + answer)
     suffix = """\n<b>{}.</b>""".format(knowledge_base)
