@@ -136,7 +136,30 @@ print(prof_standard_names)
 print(prof_standard_dpos)
 print(dpo_subjects)
 
-retrieve_fgos_standard(doc, dpo_name)
+def create_bd_file():
+    delimeter = """
+    ==========================================
+    """
+    prof_standart_keywords = """KEYWORDS: какие программы повышения квалификации 
+    профессиональной переподготовки ДПО соответствуют реализуют профстандарт профессиональный стандарт {} {}"""
+    prof_standsart_data = """Профстандарт {} {} реализуется следующими программами повышения квалификации: {}"""
+    subjects_keywords = """KEYWORDS: какие предметы дисциплины входят в программу повышения квалификации ДПО {}, что изучается?"""
+    subjects_data = """Следующие дисциплины изучаются в рамках программы ДПО {}: {}"""
+
+    bd_data = ""
+    for code, dpos in prof_standard_dpos.items():
+        bd_data += prof_standart_keywords.format(code, prof_standard_names[code]) + delimeter
+        bd_data += prof_standsart_data.format(code, prof_standard_names[code], ', '.join(dpos)) + delimeter
+
+    for dpo, subjects in dpo_subjects.items():
+        bd_data += subjects_keywords.format(dpo) + delimeter
+        bd_data += subjects_data.format(dpo, ', '.join(subjects)) + delimeter
 
 
+    with open(path + '/common_dpo_bd.txt', 'w') as f:
+        f.write(bd_data)
 
+    print(bd_data)    
+
+
+create_bd_file()
