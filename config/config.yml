@@ -38,7 +38,7 @@ categories:
       s: 4
       t: 0
       next: 1
-      bm25: "4/100"
+      bm25: "5/100"
   obr_pravo:
     display_name: "Образовательное право"
     prompt: "obr_pravo"

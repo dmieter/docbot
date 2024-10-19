@@ -15,6 +15,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 config = {}
 answer_chains = {}
 retrievers = {}
+chat_history = {}
 
 
 def load_config():
@@ -122,10 +123,13 @@ def prepare_answer(question, knowledge):
 
 
 def trim_question(question):
-  return question[:800] if len(question) > 800 else question
+  return trim_text(question, 800)
+
+def trim_text(text, size):
+  return text[:size] if len(text) > size else text
 
 def is_additional_question(question):
-  keywords = ["а", "и", "ну", "теперь", "только", "хорошо"]
+  keywords = ["а", "и", "ну", "теперь", "только", "хорошо", "хорошо,", "нет", "нет,"]
   trimmed_question = question.strip().lower()
   if len(trimmed_question) > 0:
     first_word = trimmed_question.split()[0]
@@ -134,18 +138,25 @@ def is_additional_question(question):
     return False
   
 def prepare_question_chain(message):
-  # concatenate previous messages from the same user
-  prev_messages = []
-  for msg in bot.get_chat_history(message.chat.id, limit=10, offset=1):
-    
-    if msg.from_user.id == message.from_user.id:
-      prev_messages.append(trim_question(msg.text))
-      if not is_additional_question(msg.text):
-        break
+  global chat_history
 
-  if len(prev_messages) > 0:    
-    thread = '\n'.join(reversed(prev_messages))
-    return 'Предыдущие вопросы: \n' + thread + '\n' + 'Уточнение: ' + trim_question(message.text)
+  prev_messages = []
+  if message.chat.id in chat_history.keys():
+    prev_messages = chat_history[message.chat.id]
+
+  trimmed_question = trim_question(message.text)
+
+  # if no history or question isnt additional then just create a new question thread and return current question
+  if len(prev_messages) == 0 or not is_additional_question(trimmed_question):
+    chat_history[message.chat.id] = [trimmed_question]
+    return trimmed_question
+  
+  # else need to retrieve previous messages as context and add new question to the end
+  thread = '\n'.join(prev_messages)
+  chat_history[message.chat.id].append(trimmed_question)
+
+  return '{} \n {}'.format(thread, trimmed_question)
+  
 
 
 @bot.message_handler(func=lambda msg: True)
@@ -161,7 +172,7 @@ def general_question(message):
     print(">>>>>>>>>>>>>>> QQQ: " + str(datetime.now()) + " " + str(message.chat.id) + ": " + question)
 
     question_with_context = prepare_question_chain(message)
-    print("Question with context: " + question_with_context)
+    print("Question with context: {}".format(question_with_context))
 
     knowledge_base = chat.pinned_message.text if chat.pinned_message else config['default']['knowledge_base']
     answer = prepare_answer(question_with_context, knowledge_base).replace('_', ' ')
@@ -169,7 +180,7 @@ def general_question(message):
     print(">>>>>>>>>>>>>>> AAA " + str(message.chat.id) + ": " + answer)
     suffix = """\n<b>{}.</b>""".format(knowledge_base)
     #bot.reply_to(message, answer + suffix, parse_mode = 'Markdown')
-    bot.reply_to(message, answer + suffix, parse_mode = 'HTML')
+    bot.reply_to(message, trim_text(answer, 3500) + suffix, parse_mode = 'HTML')
 
 init()
 print(str(datetime.now()) + " Doc is here!")
