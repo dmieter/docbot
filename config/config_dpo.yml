@@ -1,0 +1,21 @@
+categories:
+  dpo_common:
+    display_name: "ДПО Общие вопросы"
+    prompt: "prompt_dpo"
+    retriever: 
+      score_threshold: 0.185
+      k: 4
+      s: 4
+      t: 0
+      next: 1
+      bm25: "5/100"
+default:
+  knowledge_base: "ДПО Общие вопросы"
+  db_path: "./chroma_db"
+  prompt: "general"
+  retriever: 
+    score_threshold: 0.185
+    k: 4
+    s: 2
+    t: 1
+stoplist: ["Усманов", "Новак"]
