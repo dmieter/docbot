@@ -12,10 +12,6 @@ categories:
 default:
   knowledge_base: "ДПО Общие вопросы"
   db_path: "./chroma_db"
-  prompt: "general"
-  retriever: 
-    score_threshold: 0.185
-    k: 4
-    s: 2
-    t: 1
 stoplist: ["Усманов", "Новак"]
+bot_token: 7357901098:AAHdhZ2-2EzzvcIaLK0XqDj9e_BCmM8gYOI
+giga_creds: Y2Y4NTQyOTItNWNiNy00YmIxLWJjZTUtZGU3YWZmMDY5MWNjOjJhNDE3MzM3LWZhYTUtNDNhYi05YjYzLWE4ZmE2ZDI3MjI1MQ==

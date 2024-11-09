@@ -93,7 +93,33 @@ def new_mpei_orders(message):
     answer = "Новых документов не найдено"
   bot.reply_to(message, answer, parse_mode = 'HTML')
 
-def prepare_links(docs):
+
+DPO_LINKS = {'Электрические станции' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=982',
+             'Электроснабжение' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1199',
+             'Промышленное и гражданское строительство' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1026',
+             'Менеджмент государственных, муниципальных и корпоративных закупок' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1309',
+             'Менеджмент закупок товаров, работ, услуг' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1315',
+             'Обследование, наладка, материалы и методы контроля качества' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1518',
+             'Оценка стоимости предприятия' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1284',
+             'Переводчик в сфере профессиональной коммуникации' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1068',
+             'Подготовка сметной документации':  'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1319',
+             'Управление государственными и муниципальными закупками' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1176',
+             'Ультразвуковой контроль с применением системы на фазированных решётках HARFANG VEO' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1175',
+             'Электроэнергетика и электротехника' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1444',
+             'Диагностика структуры и свойств кристаллических материалов' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=996'}
+def prepare_dpo_links(answer):
+  references_str = None
+
+  for key, value in DPO_LINKS.items():
+    if key.lower() in answer.lower():
+      if not references_str:
+        references_str = "\nПодробные детали по соответсвующим программам:\n"
+      references_str += "<a href='{}'>{}</a>\n".format(value, key)
+
+  return references_str
+  
+
+def prepare_links(answer, docs):
   references_str = "\n"
   references = set()
 
@@ -105,6 +131,8 @@ def prepare_links(docs):
   if len(references) > 0:
     references_str += '\n'.join(list(references))
 
+  references_str += prepare_dpo_links(answer)
+
   return references_str
 
 def prepare_answer(question, knowledge):
@@ -113,7 +141,7 @@ def prepare_answer(question, knowledge):
     answer = answer_chains[knowledge].invoke(question)
 
     related_docs = retrievers[knowledge].get_relevant_documents(question)
-    answer += prepare_links(related_docs)
+    answer += prepare_links(answer, related_docs)
     #print("Retrieved docs: {}".format(related_docs))
 
   else:

@@ -294,6 +294,17 @@ import langchain
 langchain.llm_cache = InMemoryCache()
 
                                                                     # retrieve r_k with score > threshold, pick r_s by score and then r_t by time
+
+def prepareSimpleAnswerChain(llm, prompt):
+    rag_chain = (
+      {"question": RunnablePassthrough(), "context": RunnablePassthrough()}
+      | prompt
+      | llm
+      | StrOutputParser()
+    )
+    
+    return rag_chain, None
+
 def prepareAnswerChain(db_path, collection_name, embeddings, llm, prompt, search_args):
   chroma_client = chromadb.PersistentClient(path=db_path)
   vectorstore = Chroma(
@@ -338,3 +349,10 @@ def extract_arg_num(message, num, default):
         return int(args[num])
     else: 
         return default
+
+
+def get_config_value(key, category, default_category): 
+  if key in category.keys():
+    return category[key]
+  else:
+    return default_category[key]

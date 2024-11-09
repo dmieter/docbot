@@ -25,11 +25,7 @@ def load_config():
       config = yaml.safe_load(file)
       print("config reloaded: {}".format(config))
 
-def get_config_value(key, category, default_category): 
-  if key in category.keys():
-    return category[key]
-  else:
-    return default_category[key]
+
 
 def init():
   load_config()
