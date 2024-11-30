@@ -56,7 +56,10 @@ def numberize_splits(splits):
             split.metadata["page_num"] = page_counter
         else:
             split.metadata["page_num"] = page_counter
-            page_counter += 1
+        
+        page_counter += 1
+
+        #print("{}: {} ({})".format(split.metadata["page_num"],split.page_content[:20], split.metadata["name"]))
 
 
 def check_already_indexed(filename, collection):

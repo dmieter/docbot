@@ -23,6 +23,10 @@ class TalkBot:
     prompt = PromptTemplate.from_template(self.prompt_template)
     self.answer_chain, retriever = create_answer_chain(config, prompt)
 
+    if not self.answer_chain:
+      print("{} created without answer chain".format(self.display_name))
+    
+
   def ask(self, question):
     return self.answer_chain.invoke(question)
 
@@ -46,7 +50,7 @@ class GatewayBot:
   def list_talkbots(self):
     result = []
     for i, tb in enumerate(self.talk_bots):
-      result.append(f"{i}. {tb.description}")
+      result.append(f"{i+1}. {tb.description}")
     return "\n".join(result)
   
   def ask(self, question):
@@ -55,6 +59,6 @@ class GatewayBot:
       return answer
     else:
       category_num = int(answer)
-      print("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSelected category_num: " + str(category_num))
-      return self.talk_bots[category_num].ask(question)
+      print(">>>>>>>>>>>>>>> Selected category_num: " + str(category_num))
+      return self.talk_bots[category_num - 1].ask(question)
 

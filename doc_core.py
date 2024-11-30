@@ -113,6 +113,7 @@ class MyVectorStoreRetriever(VectorStoreRetriever):
         else:
             result_docs = retrieved_docs
 
+        #print("context docs: {}".format(result_docs))
         return result_docs    
     
     def select_by_bm25(self, query, select_num, select_from_num):
@@ -281,13 +282,14 @@ def format_docs(docs):
     if "stoplist" in properties.keys():
         for word in properties["stoplist"]:
             formatted_docs = formatted_docs.replace(word, "")
-    print(formatted_docs)
+    
+    #print(formatted_docs)
     #print(len(formatted_docs))
     return formatted_docs
 
 
 embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
-llm = GigaChat(verify_ssl_certs=False)  
+llm = GigaChat(verify_ssl_certs=False, model='GigaChat-Pro')  
 
 from langchain.cache import InMemoryCache
 import langchain

@@ -6,17 +6,20 @@ from langchain.vectorstores import Chroma
 from datetime import datetime
 from telebot import types
 import doc_core as dc
+import multi_level_bot as mlb
+import moderator as mdr
 import yaml
-from data import list_mpei_documents as lmd
+import dpo_excel_update as dpu
+
 
 #BOT_TOKEN = os.environ.get('DOCBOT_TOKEN')
 #bot = telebot.TeleBot(BOT_TOKEN)
 bot = None
 
 config = {}
-answer_chains = {}
-retrievers = {}
 chat_history = {}
+moderator = mdr.Moderator()
+main_talk_bot = None
 
 def load_config():
   global config
@@ -34,42 +37,69 @@ def init():
   bot = telebot.TeleBot(config['bot_token'])
   os.environ.setdefault("GIGACHAT_CREDENTIALS", config['giga_creds'])
 
-  answer_chains.clear()
-  retrievers.clear()
-  
-  for category_name in config['categories'].keys():
-    category = config['categories'][category_name]
-
-    prompt_template_name = get_config_value('prompt', category, config['default'])
-    prompt_template = dc.prompts[prompt_template_name]
-    prompt = PromptTemplate.from_template(prompt_template)
-
-    display_name = category['display_name']
-    db_path = get_config_value('db_path', category, config['default'])
-    retriever_config = get_config_value('retriever', category, config['default'])
-
-    answer_chain, retriever = dc.prepareAnswerChain(db_path, category_name, dc.embeddings, dc.llm, prompt, search_args=retriever_config)
-                                                    #search_args={"score_threshold": retriever['threshold'], "k": retriever['k'], "s" : retriever['s'], "t" : retriever['t'], "neighbours": [1500, 1000]})
-    
-    if answer_chain:
-      answer_chains[display_name] = answer_chain
-      retrievers[display_name] = retriever
+  global main_talk_bot
+  main_talk_bot = mlb.create_talk_bot(config)
 
 
 init()
 
+
+@bot.message_handler(commands=['ban'])
+def ban_user(message):
+    try:
+        if 'admins' in config.keys() and message.chat.id in config['admins']:
+          user_id, date_str = message.text.split()[1:3]
+          datetime.strptime(date_str, '%Y%m%d')  # Validate date format
+          
+          moderator.ban_user(int(user_id), date_str)
+
+          bot.reply_to(message, f"Пользователь {user_id} заблокирован до {date_str}.")
+    except Exception as e:
+        print("{} {}".format(str(e), message.text))
+
+@bot.message_handler(commands=['unban'])
+def unban_user(message):
+    try:
+        if 'admins' in config.keys() and message.chat.id in config['admins']:
+          user_id = message.text.split()[1]
+          moderator.unban_user(int(user_id))
+          bot.reply_to(message, f"Пользователь {user_id} разаблокирован.")
+    except Exception as e:
+        print("{} {}".format(str(e), message.text))        
+
+@bot.message_handler(content_types=['document'])
+def handle_file(message):
+    file_info = bot.get_file(message.document.file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+    #bot.reply_to(message, downloaded_file)
+    with open("upload/dpo/dpo.xlsx", 'wb') as new_file:
+        new_file.write(downloaded_file)
+
+    dpu.process_file("upload/dpo/dpo.xlsx")
+    reload(message)
+
+
 @bot.message_handler(commands=['reload'])
 def reload(message):
-  init()
-  bot.reply_to(message, "База знаний обновлена")
+  try:
+    if 'admins' in config.keys() and message.chat.id in config['admins']:
+      load_config()
+      global main_talk_bot
+      main_talk_bot = mlb.create_talk_bot(config)
+      
+      bot.reply_to(message, "База знаний обновлена")
+  except Exception as e:
+        print("{} {}".format(str(e), message.text))
 
 @bot.message_handler(commands=['start'])
 def start(message):
   chat_history.clear()
-  bot.send_message(message.from_user.id, """🖖 Привет! Я бот-специалист по программам ДПО! буду рад ответить на ваши вопросы.""")
+  markup = types.ReplyKeyboardRemove()
+  bot.send_message(message.from_user.id, """🖖 Привет! Я бот-специалист по программам ДПО! буду рад ответить на ваши вопросы.""", reply_markup=markup)
 
 
 DPO_LINKS = {'Электрические станции' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=982',
+             'Тепловые электрические станции' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1476',
              'Электроснабжение' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1199',
              'Промышленное и гражданское строительство' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1026',
              'Менеджмент государственных, муниципальных и корпоративных закупок' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=1309',
@@ -110,20 +140,30 @@ def prepare_links(answer, docs):
 
   return references_str
 
-def prepare_answer(question, knowledge):
-
-  if knowledge in answer_chains.keys():
-    answer = answer_chains[knowledge].invoke(question)
-
-    related_docs = retrievers[knowledge].get_relevant_documents(question)
-    answer += prepare_links(answer, related_docs)
-    #print("Retrieved docs: {}".format(related_docs))
-
+def addContactsIfNeeded(answer):
+  if "контактные данные" in answer.lower() or "обратитесь" in answer.lower() or "связаться" in answer.lower() or "обратиться" in answer.lower() or "к специалист" in answer.lower() or "со специалист" in answer.lower() or "у специалист" in answer.lower():
+      return "\n\n<b>Контактные данные:</b> Белобородов Александр Геннадьевич Email: BeloborodovAG@mpei.ru"
   else:
-    answer = "Что-то пошло не так. \nПопробуйте перезагрузить бота через команду /start".format(knowledge)
+      return ""
+
+
+def log_answer(name, question, answer):
+  current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  delimeter = "\n===============================\n"
+  with open('question_log.txt', 'a') as f:
+    f.write("{} ({}): {}\n\n{}{}".format(name, current_time_str, question, answer, delimeter))
+
+def prepare_answer(question, knowledge):
+  try:
+    answer = main_talk_bot.ask(question)
+    answer += addContactsIfNeeded(answer)
+    answer += prepare_links(answer, [])
+  except Exception as e:
+    answer = "Опаньки, что-то пошло не так, попробуйте переформулировать вопрос :("
+    log_answer(None, question, "Ошибка: {} {}".format(e.__str__(), e))
+    print("Ошибка при ответе на вопрос '{}': {} {}".format(question, e.__str__(), e))
 
   return answer
-
 
 def trim_question(question):
   return trim_text(question, 800)
@@ -132,7 +172,7 @@ def trim_text(text, size):
   return text[:size] if len(text) > size else text
 
 def is_additional_question(question):
-  keywords = ["а", "и", "ну", "теперь", "только", "хорошо", "хорошо,", "нет", "нет,"]
+  keywords = ["а", "и", "ну", "только", "хорошо", "хорошо,", "нет", "нет,"]
   trimmed_question = question.strip().lower()
   if len(trimmed_question) > 0:
     first_word = trimmed_question.split()[0]
@@ -166,20 +206,26 @@ def prepare_question_chain(message):
 def general_question(message):
 
   chat = bot.get_chat(message.chat.id)
+  username = message.from_user.username if message.from_user.username is not None else message.chat.username
   question = message.text
   print(">>>>>>>>>>>>>>> QQQ: " + str(datetime.now()) + " " + str(message.chat.id) + ": " + question)
 
-  question_with_context = prepare_question_chain(message)
-  print("Question with context: {}".format(question_with_context))
+  is_allowed, description = moderator.is_question_allowed(message.chat.id, config)
+  if not is_allowed:
+    log_answer("{} ({})".format(username, chat.id), question, description)
+    bot.reply_to(message, description)
+    return
 
-  knowledge_base = config['default']['knowledge_base']
-  answer = prepare_answer(question_with_context, knowledge_base).replace('_', ' ')
+  question_with_context = prepare_question_chain(message)
+  #print("Question with context: {}".format(question_with_context))
+
+  answer = prepare_answer(question_with_context, None)
+  log_answer("{} ({})".format(username, chat.id), question_with_context, answer)
   
-  print(">>>>>>>>>>>>>>> AAA " + str(message.chat.id) + ": " + answer)
-  suffix = """\n<b>{}.</b>""".format(knowledge_base)
+  #print(">>>>>>>>>>>>>>> AAA " + str(message.chat.id) + ": " + answer)
   #bot.reply_to(message, answer + suffix, parse_mode = 'Markdown')
-  bot.reply_to(message, trim_text(answer, 3500) + suffix, parse_mode = 'HTML')
+  bot.reply_to(message, trim_text(answer, 3600), parse_mode='HTML')
 
 #init()
-print(str(datetime.now()) + " ChatDPO is here!")
+print(str(datetime.now()) + " Marti Level DPO Doc is here!")
 bot.infinity_polling()
