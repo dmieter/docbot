@@ -59,6 +59,10 @@ class GatewayBot:
       return answer
     else:
       category_num = int(answer)
-      print(">>>>>>>>>>>>>>> Selected category_num: " + str(category_num))
+      if(category_num < 1 or category_num > len(self.talk_bots)):
+        print(">>>>>>>>>>>>>>> Selected category num: " + sstr(category_num))
+      else:  
+        print(">>>>>>>>>>>>>>> Selected category: " + self.talk_bots[category_num - 1].display_name)
+
       return self.talk_bots[category_num - 1].ask(question)
 

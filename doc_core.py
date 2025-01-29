@@ -283,7 +283,7 @@ def format_docs(docs):
         for word in properties["stoplist"]:
             formatted_docs = formatted_docs.replace(word, "")
     
-    #print(formatted_docs)
+    print(formatted_docs)
     #print(len(formatted_docs))
     return formatted_docs
 

@@ -69,14 +69,17 @@ def unban_user(message):
 
 @bot.message_handler(content_types=['document'])
 def handle_file(message):
-    file_info = bot.get_file(message.document.file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
-    #bot.reply_to(message, downloaded_file)
-    with open("upload/dpo/dpo.xlsx", 'wb') as new_file:
-        new_file.write(downloaded_file)
+    try:
+      file_info = bot.get_file(message.document.file_id)
+      downloaded_file = bot.download_file(file_info.file_path)
+      #bot.reply_to(message, downloaded_file)
+      with open("upload/dpo/dpo.xlsx", 'wb') as new_file:
+          new_file.write(downloaded_file)
 
-    dpu.process_file("upload/dpo/dpo.xlsx")
-    reload(message)
+      dpu.process_file("upload/dpo/dpo.xlsx")
+      reload(message)
+    except Exception as e:
+      bot.reply_to(message, "Опаньки, возможно ошибка в формате данных: {}".format(str(e)))
 
 
 @bot.message_handler(commands=['reload'])
