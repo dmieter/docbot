@@ -25,6 +25,8 @@ MAX_RELATED_DOCS_NUMBER = 5 # maximum number of neighbour docs (radius)
 #EMBEDDINGS_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 #EMBEDDINGS_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 EMBEDDINGS_MODEL = "cointegrated/rubert-tiny2"
+#EMBEDDINGS_MODEL = "ai-forever/sbert_large_nlu_ru"
+#EMBEDDINGS_MODEL = "cointegrated/LaBSE-en-ru"
 
 prompt_template_eng = """Use the following pieces of context to answer the question at the end.
       If you don't know the answer, just say that you don't know, don't try to make up an answer.
@@ -292,7 +294,8 @@ def format_docs(docs):
 
 
 embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
-llm = GigaChat(verify_ssl_certs=False, model='GigaChat-Pro')  
+#llm = GigaChat(verify_ssl_certs=False, model='GigaChat-Lite')  
+llm = GigaChat(verify_ssl_certs=False)  
 
 from langchain.cache import InMemoryCache
 import langchain
@@ -311,6 +314,7 @@ def prepareSimpleAnswerChain(llm, prompt):
     return rag_chain, None
 
 def prepareAnswerChain(db_path, collection_name, embeddings, llm, prompt, search_args):
+  print("Prepare answer chain for collection_name {}".format(collection_name))
   chroma_client = chromadb.PersistentClient(path=db_path)
   vectorstore = Chroma(
       client=chroma_client,

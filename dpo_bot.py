@@ -1,4 +1,5 @@
 import os
+import random
 import telebot
 from langchain.prompts import PromptTemplate
 import chromadb
@@ -117,6 +118,9 @@ DPO_LINKS = {'Электрические станции' : 'https://mpei.ru/Educ
              'Диагностика структуры и свойств кристаллических материалов' : 'https://mpei.ru/Education/educationalprograms/2023/Lists/DopPrograms2023/disp.aspx?ID=996'}
 def prepare_dpo_links(answer):
   references_str = ""
+  reply_markup = None
+  button_messages = ["Сколько стоит обучение по программе", "Какие сроки обучения по программе", "Дай контактные ланные по программе"]
+    
 
   for key, value in DPO_LINKS.items():
     if key.lower() in answer.lower():
@@ -124,7 +128,15 @@ def prepare_dpo_links(answer):
         references_str = "\nПодробные детали по соответсвующим программам:\n"
       references_str += "<a href='{}'>{}</a>\n".format(value, key)
 
-  return references_str
+      if not reply_markup:
+         reply_markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+      btn = types.KeyboardButton("Расскажи подробнее о программе " + key)
+      reply_markup.add(btn)
+      btn = types.KeyboardButton(random.choice(button_messages) + " " + key)
+      reply_markup.add(btn)
+      
+
+  return references_str, reply_markup
   
 
 def prepare_links(answer, docs):
@@ -139,13 +151,14 @@ def prepare_links(answer, docs):
   if len(references) > 0:
     references_str += '\n'.join(list(references))
 
-  references_str += prepare_dpo_links(answer)
+  dpo_links, _ = prepare_dpo_links(answer)
+  references_str += dpo_links
 
   return references_str
 
 def addContactsIfNeeded(answer):
-  if "контактные данные" in answer.lower() or "обратитесь" in answer.lower() or "связаться" in answer.lower() or "обратиться" in answer.lower() or "к специалист" in answer.lower() or "со специалист" in answer.lower() or "у специалист" in answer.lower():
-      return "\n\n<b>Контактные данные:</b> Белобородов Александр Геннадьевич Email: BeloborodovAG@mpei.ru"
+  if "контактные данные" in answer.lower() or "связаться" in answer.lower() or "обратиться" in answer.lower() or "к специалист" in answer.lower() or "со специалист" in answer.lower() or "у специалист" in answer.lower():
+      return "\n\n<b>По общим вопросам обращайтесь к </b> Белобородову Александру Геннадьевичу Email: BeloborodovAG@mpei.ru"
   else:
       return ""
 
@@ -156,17 +169,22 @@ def log_answer(name, question, answer):
   with open('question_log.txt', 'a') as f:
     f.write("{} ({}): {}\n\n{}{}".format(name, current_time_str, question, answer, delimeter))
 
+from telebot import types
 def prepare_answer(question, knowledge):
+  reply_markup = None
   try:
     answer = main_talk_bot.ask(question)
     answer += addContactsIfNeeded(answer)
-    answer += prepare_links(answer, [])
+    #answer += prepare_links(answer, [])
+    dpo_links, reply_markup = prepare_dpo_links(answer)
+    answer += dpo_links
+    
   except Exception as e:
     answer = "Опаньки, что-то пошло не так, попробуйте переформулировать вопрос :("
     log_answer(None, question, "Ошибка: {} {}".format(e.__str__(), e))
     print("Ошибка при ответе на вопрос '{}': {} {}".format(question, e.__str__(), e))
 
-  return answer
+  return answer, reply_markup
 
 def trim_question(question):
   return trim_text(question, 800)
@@ -212,6 +230,7 @@ def general_question(message):
   username = message.from_user.username if message.from_user.username is not None else message.chat.username
   question = message.text
   print(">>>>>>>>>>>>>>> QQQ: " + str(datetime.now()) + " " + str(message.chat.id) + ": " + question)
+  
 
   is_allowed, description = moderator.is_question_allowed(message.chat.id, config)
   if not is_allowed:
@@ -222,12 +241,13 @@ def general_question(message):
   question_with_context = prepare_question_chain(message)
   #print("Question with context: {}".format(question_with_context))
 
-  answer = prepare_answer(question_with_context, None)
+  answer, reply_markup = prepare_answer(question_with_context, None)
   log_answer("{} ({})".format(username, chat.id), question_with_context, answer)
   
   #print(">>>>>>>>>>>>>>> AAA " + str(message.chat.id) + ": " + answer)
   #bot.reply_to(message, answer + suffix, parse_mode = 'Markdown')
-  bot.reply_to(message, trim_text(answer, 3600), parse_mode='HTML')
+
+  bot.reply_to(message, trim_text(answer, 3600), parse_mode='HTML', reply_markup = reply_markup)
 
 #init()
 print(str(datetime.now()) + " Marti Level DPO Doc is here!")

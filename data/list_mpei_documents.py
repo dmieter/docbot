@@ -64,4 +64,4 @@ def list_all_docs(from_date):
 
 
 # %% TEST   
-list_all_docs("2024-02-14")
+#list_all_docs("2024-02-14")

@@ -1,6 +1,10 @@
 from langchain.prompts import PromptTemplate
 import doc_core as dc
 
+#keywords_prompt = PromptTemplate.from_template("выдели и перечисли через пробел до 4 точных ключевых слова из текста: {question}")
+#keywords_chain, retriever = dc.prepareSimpleAnswerChain(dc.llm, keywords_prompt)
+#print(keywords_chain.invoke("Есть ли программы по физике твердого тела?"))
+
 def create_answer_chain(config, prompt):
     if 'collection_name' in config.keys():
       return dc.prepareAnswerChain(config['db_path'], config['collection_name'], dc.embeddings, dc.llm, prompt, config['retriever'])
@@ -12,6 +16,7 @@ def create_talk_bot(config):
     return GatewayBot(config)
   else:
     return TalkBot(config)
+
 
 class TalkBot:
   def __init__(self, config):
@@ -44,7 +49,11 @@ class GatewayBot:
     self.talk_bots = []
 
     for category_name, category_config in config['categories'].items():
-      self.talk_bots.append(create_talk_bot(category_config))
+      if 'inactive' in category_config and category_config['inactive'] == 'true':
+        print("Skipping inactive category: " + category_name)
+        continue
+      else:
+        self.talk_bots.append(create_talk_bot(category_config))
     
 
   def list_talkbots(self):
@@ -60,7 +69,7 @@ class GatewayBot:
     else:
       category_num = int(answer)
       if(category_num < 1 or category_num > len(self.talk_bots)):
-        print(">>>>>>>>>>>>>>> Selected category num: " + sstr(category_num))
+        print(">>>>>>>>>>>>>>> Selected category num: " + str(category_num))
       else:  
         print(">>>>>>>>>>>>>>> Selected category: " + self.talk_bots[category_num - 1].display_name)
 

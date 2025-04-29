@@ -38,6 +38,8 @@ def index_dpo_file(dpo_file, collection_name, rm_collection = False, db_dir = DB
     ic.numberize_splits(splits)
     print(len(splits))
     EMBEDDINGS_MODEL = "cointegrated/rubert-tiny2"
+    #EMBEDDINGS_MODEL = "ai-forever/sbert_large_nlu_ru"
+    #EMBEDDINGS_MODEL = "cointegrated/LaBSE-en-ru"
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDINGS_MODEL)
     vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings, collection_name=collection_name, persist_directory=DB_DIR)
 

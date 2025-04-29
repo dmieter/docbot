@@ -133,10 +133,10 @@ def create_bd_file_programms():
     delimeter = """
 ==========================================
 """
-    subjects_keywords = """KEYWORDS: какие предметы дисциплины входят в программу {}, что изучается?"""
-    subjects_data = """Следующие предметы изучаются в рамках программы {} {}: {}"""
-    single_dpo_keywords = """KEYWORDS: {} обучение детали"""
-    single_dpo_data = """Программа {} "{}". 
+    subjects_keywords = """KEYWORDS: предметы дисциплины изучение тема {} """
+    subjects_data = """Следующие предметы изучаются в рамках программы {} "{}": {}"""
+    single_dpo_keywords = """KEYWORDS: {}"""
+    single_dpo_data = """Полная информация о программе обучения {} "{}". 
 Форма обучения: {}, {}.
 Выдается документ: {}. 
 Стоимость обучения: {} руб.
@@ -144,6 +144,13 @@ def create_bd_file_programms():
 Реализует ФГОС стандарт по направлению подготовки {}.
 Реализует профстандарты: {}.
 Контактное лицо: {}, тел. {}"""
+
+    prof_standart_keywords = """KEYWORDS: какие программы ДПО соответствуют реализуют входят в профстандарт профессиональный стандарт {} """
+    prof_standsart_data = """Профстандарт {} реализуется следующими программами ДПО: 
+{}"""
+
+    single_subject_keywords = """KEYWORDS: {} """
+    single_subject_data = """Дисциплина "{}" изучается в программе ДПО {} "{}" """
 
     bd_data = ""
     for dpo_name, dpo in dpos_by_name.items():
@@ -154,6 +161,16 @@ def create_bd_file_programms():
         bd_data += single_dpo_keywords.format(dpo.name) + delimeter
         bd_data += single_dpo_data.format(dpo.dpo_type, dpo.get_name(), dpo.form, dpo.implementation, dpo.diploma, dpo.cost, dpo.terms,  ', '.join(dpo.fgos), ', '.join(dpo.profstandards), dpo.contact_person, dpo.phone_number) + delimeter
         
+    for code, dpos in prof_standard_dpos.items():
+        code_name = get_prof_standard_name(code)
+        bd_data += prof_standart_keywords.format(code_name) + delimeter
+        bd_data += prof_standsart_data.format(code_name, '\n'.join(dpos)) + delimeter
+
+    for dpo_name, dpo in dpos_by_name.items():
+        for subject in dpo.subjects:
+            bd_data += single_subject_keywords.format(subject) + delimeter
+            bd_data += single_subject_data.format(subject, dpo.dpo_type, dpo.get_name()) + delimeter   
+
     with open(path + '/dpo_programms_excel.txt', 'w') as f:
         f.write(bd_data) 
 
